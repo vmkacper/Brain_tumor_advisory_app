@@ -147,13 +147,12 @@ if uploaded_files:
                             predicted_class = CLASSES[predicted_index]
                             confidence = probabilities[predicted_index].item() * 100
 
-
-                        if confidence > 60:
-                            st.error(f"{predicted_class}: {confidence:.2f}%")
-                        elif predicted_class == "No tumor":
+                        if predicted_class == "No tumor":
                             st.success(f"{predicted_class}: {confidence:.2f}%")
-                        else:
+                        elif confidence > 60:
                             st.error(f"{predicted_class}: {confidence:.2f}%")
+                        else:
+                            st.warning(f"{predicted_class}: {confidence:.2f}%, confidence too low, please double check.")
 
                     except Exception as e:
                         st.error(f"Wystąpił błąd: {e}")
