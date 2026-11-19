@@ -80,6 +80,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "brain_classifier_model.pth")
 NUM_CLASSES = 4
 CLASSES = ["Tumor: Glioma", "Tumor: Meningioma", "No tumor", "Tumor: Pituitary"]
+DEMO_DIR = os.path.join(BASE_DIR, "demo_images")
 
 model = BrainTumorCNN(num_classes=NUM_CLASSES)
 model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu'), weights_only=True))
@@ -115,9 +116,33 @@ st.caption("""
 uploaded_files = st.file_uploader("Wybierz zdjęcia rezonansu magnetycznego w formatach (JPG, PNG)...", type=["jpg", "jpeg", "png"],
                                   accept_multiple_files=True)
 
+images_to_analize = []
+
 if uploaded_files:
+    for file in uploaded_files:
+        images_to_analize.append((file.name, file.getvalue()))
     st.info(f"📁 {len(uploaded_files)} zdjęcie/a do analizy.")
-    st.markdown("---")
+
+else:
+    demo_paths = sorted(
+        f for f in os.listdir(DEMO_DIR)
+        if f.lower().endswith((".jpeg",".jpg",".png"))
+    )[:4]
+
+    for filename in demo_paths:
+        file_path = os.path.join(DEMO_DIR, filename)
+        with open(file_path, "rb") as f:
+            images_to_analize.append((filename, f.read()))
+
+st.markdown("---")
+
+if images_to_analize:
+
+    st.subheader("Podgląd skanów")
+    preview_cols = st.columns(min(len(images_to_analize), 4))
+    for idx, (filename, image_bytes) in enumerate(images_to_analize):
+        with preview_cols[idx % 4]:
+            st.image(image_bytes, caption=filename, use_container_width=True)
 
     _, btn_col, _ = st.columns([1, 1, 1])
     with btn_col:
@@ -129,15 +154,14 @@ if uploaded_files:
             st.subheader("Wyniki diagnozy")
             cols = st.columns(2)
 
-            for index, file in enumerate(uploaded_files):
+            for index, (filename, image_bytes) in enumerate(images_to_analize):
                 col = cols[index%2]
 
                 with col:
                     try:
-                        st.image(Image.open(file), caption=file.name, use_container_width=True)
+                        st.image(image_bytes, caption=filename, use_container_width=True)
 
-                        image_bytes = file.getvalue()
-                        input_tensor = process_image(image_bytes, filename=file.name)
+                        input_tensor = process_image(image_bytes, filename=filename)
 
                         with torch.no_grad():
                             outputs = model(input_tensor)
